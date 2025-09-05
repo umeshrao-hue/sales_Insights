@@ -1,0 +1,224 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Insights Report Request</title>
+  <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background: #f7f7f7;            
+            display: flex; 
+            justify-content: center; 
+            align-items: center;            
+            min-height: 100vh; 
+            margin: 0; 
+        }
+        .form-container { 
+            background: #fff; 
+            padding: 25px; 
+            border-radius: 10px;                       
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);                       
+            width: 100%; 
+            max-width: 500px; 
+        }
+        h2 { 
+            text-align: center; 
+            margin-bottom: 20px; 
+            color: #333;
+        }
+        .form-group { 
+            margin-bottom: 15px; 
+        }
+        label { 
+            display: block; 
+            margin-bottom: 5px; 
+            font-weight: bold; 
+            color: #555;
+        }
+        input, select { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid #ccc;                     
+            border-radius: 5px; 
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+        button { 
+            width: 100%; 
+            padding: 12px; 
+            background: #667eea; 
+            color: white;              
+            border: none; 
+            border-radius: 5px; 
+            font-size: 16px; 
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        button:hover { 
+            background: #5563d4; 
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .success-message {
+            display: none;
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #c3e6cb;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+  <div class="form-container">
+    <h2>Insights Report Request</h2>
+
+    <form id="insightsForm">
+      <!-- Vertical Dropdown -->
+      <div class="form-group">
+        <label for="vertical">Vertical (Criteria)</label>
+        <select id="vertical" name="vertical">
+          <option value="">-- Select Vertical --</option>
+        </select>
+      </div>
+
+      <!-- Counselor Dropdown -->
+      <div class="form-group">
+        <label for="counselorName">Counselor Name</label>
+        <select id="counselorName" name="counselorName">
+          <option value="">-- Select Counselor --</option>
+        </select>
+      </div>
+
+      <!-- Email (manual entry only) -->
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" name="email" placeholder="Enter email manually">
+      </div>
+
+      <!-- Date Range -->
+      <div class="form-group">
+        <label>Date Range</label>
+        <input type="date" id="startDate" name="startDate">
+        to
+        <input type="date" id="endDate" name="endDate">
+      </div>
+
+      <button type="submit" id="submitBtn">Generate Report</button>
+    </form>
+  </div>
+
+  <script>
+  let records = [];
+
+  async function loadData() {
+    try {
+      const response = await fetch(
+        "https://n8n.srv965309.hstgr.cloud/webhook/edd2e07e-4d02-4047-890d-2a3affd0201c?ts=" + Date.now()
+      );
+      records = await response.json();
+      console.log("Fetched records:", records);
+
+      // Populate Vertical (Criteria)
+      const verticalSelect = document.getElementById("vertical");
+      verticalSelect.innerHTML = '<option value="">-- Select Vertical --</option>';
+      const uniqueCriteria = [...new Set(records.map(r => (r["Vertical"] || "").trim()).filter(Boolean))];
+      uniqueCriteria.forEach(criteria => {
+        const opt = document.createElement("option");
+        opt.value = criteria;
+        opt.textContent = criteria;
+        verticalSelect.appendChild(opt);
+      });
+
+      // Populate Counselor (all unique names)
+      const counselorSelect = document.getElementById("counselorName");
+      counselorSelect.innerHTML = '<option value="">-- Select Counselor --</option>';
+      const uniqueCounselors = [...new Set(records.map(r => (r["Counselor Name"] || "").trim()).filter(Boolean))];
+      uniqueCounselors.forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        counselorSelect.appendChild(opt);
+      });
+    } catch (err) {
+      console.error("Error fetching data:", err);
+    }
+  }
+
+  window.addEventListener("load", loadData);
+
+  // 🚀 Form Submit Handler
+  document.getElementById("insightsForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const submitBtn = document.getElementById("submitBtn");
+    const originalText = submitBtn.innerHTML;
+    
+    // Show loading state
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="loading-spinner"></span>Generating Report...';
+
+    const payload = {
+      vertical: document.getElementById("vertical").value,
+      counselorName: document.getElementById("counselorName").value,
+      email: document.getElementById("email").value,
+     startDate: formatDate(document.getElementById("startDate").value),
+  endDate: formatDate(document.getElementById("endDate").value),
+    };
+
+    try {
+      const response = await fetch(
+        "https://n8n.srv965309.hstgr.cloud/webhook/c84b0531-7b76-4ea7-97bc-4f8539b93798",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+      const result = await response.json();
+      console.log("Form submitted successfully:", result);
+      alert("Report request submitted successfully!");
+    } catch (err) {
+      console.error("Error submitting form:", err);
+      alert("Failed to submit request. Please try again.");
+    } finally {
+      // Hide loading state
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+    }
+  });
+
+  // Function to format YYYY-MM-DD → M/D/YYYY
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  return (d.getMonth() + 1) + "/" + d.getDate() + "/" + d.getFullYear();
+}
+
+</script>
+
+</body>
+</html>
